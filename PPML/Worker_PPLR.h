@@ -42,7 +42,7 @@ public:
     char *hello = "Hello from client";
     char buffer[1024] = {0};
     int mlsp_port = 8100;
-    char *mlsp_ip = "127.0.0.1";
+    char *mlsp_ip = "10.144.0.2";
     int id = 1;
 
 
@@ -63,7 +63,7 @@ public:
     long logn = 10; ///< number of slot is 1024 (this value should be < logN in "src/Params.h")
     long logq = 450; ///< Ciphertext modulus (this value should be <= logQ in "scr/Params.h")
     long n = 1 << logn;
-    long numThread = 5;
+    long numThread = 1;
     double alpha = 1;
     int epochs = 30;
     int nb_slots = n;

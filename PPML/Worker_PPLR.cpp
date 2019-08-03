@@ -8,7 +8,7 @@
 Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false) {
 
     // Generate the cryptosystem keys
-    SetNumThreads(2);
+    SetNumThreads(numThread);
 
     //SecretKey secretKey(ring);
     //Scheme scheme(secretKey, ring);
