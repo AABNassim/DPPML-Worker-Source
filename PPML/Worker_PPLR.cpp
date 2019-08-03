@@ -35,7 +35,7 @@ Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false)
     complex<double> *dvec = scheme.decrypt(secretKey, cipher1);
 
     cout << "FHE decrypt result:" << endl;
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < d; ++i) {
         cout << dvec[i] << ' ';
     }
     cout << " " << endl;
@@ -122,7 +122,7 @@ bool Worker_PPLR::send_file(int sock, char* path)
         return false;
     if (filesize > 0)
     {
-        cout << "Sending a file of size : " << filesize << endl;
+        //cout << "Sending a file of size : " << filesize << endl;
         char buffer[1024];
         do
         {
@@ -172,7 +172,7 @@ bool Worker_PPLR::read_file(int sock, char* path)
     FILE *f = fopen(path, "wb");
     long filesize;
     if (!read_long(sock, &filesize)) {
-        cout << "lol" << endl;
+        //cout << "lol" << endl;
         return false;
     }
     if (filesize > 0)
@@ -500,32 +500,32 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg5(Ciphertext cipher_x) {
     scheme.mult(cipher_x_cube, cipher_square, cipher_x);
     scheme.reScaleByAndEqual(cipher_x_cube, logp);
 
-    cout << " CUBE " << endl;
+    /*cout << " CUBE " << endl;
     complex<double> *decrypted_x_cube = scheme.decrypt(secretKey, cipher_x_cube);
     for (int i = 0; i < n; i++) {
         cout << decrypted_x_cube[i] << ", ";
     }
-    cout << " " << endl;
+    cout << " " << endl;*/
 
     scheme.mult(cipher_x_four, cipher_x_cube, cipher_x);
     scheme.reScaleByAndEqual(cipher_x_four, logp);
 
-    cout << " FOUR " << endl;
+    /*cout << " FOUR " << endl;
     complex<double> *decrypted_x_four = scheme.decrypt(secretKey, cipher_x_four);
     for (int i = 0; i < n; i++) {
         cout << decrypted_x_four[i] << ", ";
     }
-    cout << " " << endl;
+    cout << " " << endl;*/
 
     scheme.mult(cipher_x_five, cipher_x_four, cipher_x);
     scheme.reScaleByAndEqual(cipher_x_five, logp);
 
-    cout << " FIVE " << endl;
+    /*cout << " FIVE " << endl;
     complex<double> *decrypted_x_five = scheme.decrypt(secretKey, cipher_x_five);
     for (int i = 0; i < n; i++) {
         cout << decrypted_x_five[i] << ", ";
     }
-    cout << " " << endl;
+    cout << " " << endl;*/
 
     scheme.multByConst(cipher_ax, cipher_x, sigmoid_coeffs_deg5[1], logp);
     scheme.reScaleByAndEqual(cipher_ax, logp);
@@ -541,8 +541,6 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg5(Ciphertext cipher_x) {
     //eussou = scheme.decrypt(secretKey, cipher_sig);
 
     //scheme.encrypt(cipher_sig, eussou, n, logp, logq);
-
-
 
     Ciphertext cipher_result;
     scheme.modDownByAndEqual(cipher_ax, cipher_ax.logq - cipher_sig.logq);
@@ -664,43 +662,10 @@ void Worker_PPLR::pp_fit_local() {
 
         for (int i = 0; i < nb_training_ciphers; i++) {
             Ciphertext cipher_product;
-            //Ciphertext cipher_dot_product;
-            /*
-            complex<double> *hhh = scheme.decrypt(secretKey, cipher_training_set);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << hhh[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;
-
-            cout << "wa shit" << endl;*/
             scheme.mult(cipher_product, cipher_model, cipher_training_set[i]);   // TODO : modify
             scheme.reScaleByAndEqual(cipher_product, logp);
 
-            /*
-            complex<double> * deb = scheme.decrypt(secretKey, cipher_product);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << deb[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;
-
-            */
             Ciphertext cipher_dot_product = sum_slots(cipher_product, 0, log_nb_cols);
-            /*
-            deb = scheme.decrypt(secretKey, cipher_dot_product);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << deb[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
-
 
             scheme.multAndEqual(cipher_dot_product, cipher_gadget_matrix);
 
@@ -710,30 +675,12 @@ void Worker_PPLR::pp_fit_local() {
 
             Ciphertext cipher_sig = pp_sigmoid_deg3(cipher_dot_product_duplicated);
 
-            /*complex<double> * eups = scheme.decrypt(secretKey, cipher_sig);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << eups[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
-
-
             scheme.multAndEqual(cipher_sig, cipher_training_set[i]); // TODO : modify
             scheme.reScaleByAndEqual(cipher_sig, logp);
 
             Ciphertext cipher_partial_grad = sum_slots(cipher_sig, log_nb_cols, log_nb_rows + log_nb_cols);
-            cout << "CHOUF, EKUUUUTH " << cipher_partial_grad.logq << endl;
             scheme.addAndEqual(cipher_grad, cipher_partial_grad);
-            /*complex<double> * lol = scheme.decrypt(secretKey, cipher_grad);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << lol[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
+
         }
 
         scheme.multByConstAndEqual(cipher_grad, alpha / m, logp);
@@ -764,12 +711,6 @@ void Worker_PPLR::pp_fit_local() {
             weights_log_file << "" << endl;
         }
         cout << " " << endl;
-        //Ciphertext cipher_model_bis = refresh_cipher(cipher_model);
-        //cipher_model = cipher_model_bis;
-        //complex<double> * plaintext = scheme.decrypt(secretKey, cipher_model);
-        //Ciphertext new_model;
-        //cipher_model.free();
-        //scheme.encrypt(new_model, plaintext, n, logp, logq);
     }
     grads_log_file.close();
     weights_log_file.close();
@@ -827,42 +768,11 @@ void Worker_PPLR::pp_fit() {
 
         for (int i = 0; i < nb_training_ciphers; i++) {
             Ciphertext cipher_product;
-            //Ciphertext cipher_dot_product;
-            /*
-            complex<double> *hhh = scheme.decrypt(secretKey, cipher_training_set);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << hhh[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;
 
-            cout << "wa shit" << endl;*/
             scheme.mult(cipher_product, cipher_model, cipher_training_set[i]);   // TODO : modify
             scheme.reScaleByAndEqual(cipher_product, logp);
 
-            /*
-            complex<double> * deb = scheme.decrypt(secretKey, cipher_product);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << deb[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;
-
-            */
             Ciphertext cipher_dot_product = sum_slots(cipher_product, 0, log_nb_cols);
-            /*
-            deb = scheme.decrypt(secretKey, cipher_dot_product);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << deb[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
 
 
             scheme.multAndEqual(cipher_dot_product, cipher_gadget_matrix);
@@ -871,32 +781,14 @@ void Worker_PPLR::pp_fit() {
 
             Ciphertext cipher_dot_product_duplicated = sum_slots_reversed(cipher_dot_product, 0, log_nb_cols);
 
-            Ciphertext cipher_sig = pp_sigmoid_deg3(cipher_dot_product_duplicated);
-
-            /*complex<double> * eups = scheme.decrypt(secretKey, cipher_sig);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << eups[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
+            Ciphertext cipher_sig = pp_sigmoid(cipher_dot_product_duplicated, sigmoid_degree);
 
 
             scheme.multAndEqual(cipher_sig, cipher_training_set[i]); // TODO : modify
             scheme.reScaleByAndEqual(cipher_sig, logp);
 
             Ciphertext cipher_partial_grad = sum_slots(cipher_sig, log_nb_cols, log_nb_rows + log_nb_cols);
-            cout << "CHOUF, EKUUUUTH " << cipher_partial_grad.logq << endl;
             scheme.addAndEqual(cipher_grad, cipher_partial_grad);
-            /*complex<double> * lol = scheme.decrypt(secretKey, cipher_grad);
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < nb_cols; j++) {
-                    cout << lol[i * nb_cols + j] << ", ";
-                }
-                cout << " " << endl;
-            }
-            cout << " " << endl;*/
         }
 
         // So ..
@@ -1031,42 +923,42 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg3(Ciphertext cipher_x) {
 
     complex<double> *eussou = scheme.decrypt(secretKey, cipher_x);
 
-    cout << "Input: ";
+    /*cout << "Input: ";
     for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
     }
-    cout << " " << endl;
+    cout << " " << endl;*/
 
     scheme.multByConstAndEqual(cipher_x, 0.125, logp);
     scheme.reScaleByAndEqual(cipher_x, logp);
 
-    cout << "First Mul: ";
+    //cout << "First Mul: ";
     scheme.mult(cipher_x_cube, cipher_x, cipher_x);
     scheme.reScaleByAndEqual(cipher_x_cube, logp);
 
-    eussou = scheme.decrypt(secretKey, cipher_x_cube);
+    /*eussou = scheme.decrypt(secretKey, cipher_x_cube);
 
     for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
     }
     cout << " " << endl;
 
-    cout << "Second Mul: ";
+    cout << "Second Mul: ";*/
     scheme.mult(cipher_x_cube, cipher_x_cube, cipher_x);
     scheme.reScaleByAndEqual(cipher_x_cube, logp);
 
-    eussou = scheme.decrypt(secretKey, cipher_x_cube);
+    /*eussou = scheme.decrypt(secretKey, cipher_x_cube);
 
     for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
     }
     cout << " " << endl;
 
-    cout << "First Const Mul: ";
+    cout << "First Const Mul: ";*/
     scheme.multByConst(cipher_ax, cipher_x, sigmoid_coeffs_deg3[1], logp);
     scheme.reScaleByAndEqual(cipher_ax, logp);
 
-    eussou = scheme.decrypt(secretKey, cipher_ax);
+    /*eussou = scheme.decrypt(secretKey, cipher_ax);
     //scheme.encrypt(cipher_ax, eussou, n, logp, logq);
 
     for (int i = 0; i < n; i++) {
@@ -1074,24 +966,24 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg3(Ciphertext cipher_x) {
     }
     cout << " " << endl;
 
-    cout << "Second Const Mul: ";
+    cout << "Second Const Mul: ";*/
 
 
     scheme.multByConst(cipher_sig, cipher_x_cube, sigmoid_coeffs_deg3[2], logp);
     scheme.reScaleByAndEqual(cipher_sig, logp);
 
-    eussou = scheme.decrypt(secretKey, cipher_sig);
+    /*eussou = scheme.decrypt(secretKey, cipher_sig);
 
     for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
     }
     cout << " " << endl;
 
-    cout << "Const add: ";
+    cout << "Const add: ";*/
 
     scheme.addConstAndEqual(cipher_sig, sigmoid_coeffs_deg3[0], logp);
 
-    eussou = scheme.decrypt(secretKey, cipher_sig);
+    /*eussou = scheme.decrypt(secretKey, cipher_sig);
 
     for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
@@ -1099,7 +991,7 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg3(Ciphertext cipher_x) {
     cout << " " << endl;
     //scheme.encrypt(cipher_sig, eussou, n, logp, logq);
 
-    cout << "ADD: ";
+    cout << "ADD: ";*/
 
     Ciphertext cipher_result;
     scheme.modDownByAndEqual(cipher_ax, 2 * logp);
@@ -1110,10 +1002,10 @@ Ciphertext Worker_PPLR::pp_sigmoid_deg3(Ciphertext cipher_x) {
 
     eussou = scheme.decrypt(secretKey, cipher_result);
 
-    for (int i = 0; i < n; i++) {
+    /*for (int i = 0; i < n; i++) {
         cout << eussou[i] << ", ";
     }
-    cout << " " << endl;
+    cout << " " << endl;*/
 
     return cipher_result;
 }

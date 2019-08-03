@@ -28,16 +28,15 @@ void print(std::vector<int> const &input)
 }
 
 
+
 int main() {
     //LogisticRegression *model = new LogisticRegression();
     //model->approx_fit();
     //return 0;
     srand(42);
-    //return 0;
     const std::string& id = "0-1564507236-14833-5318-0x10cdcb5c0";
-    //cout << id << endl;
     SetSeed((const unsigned char *) id.c_str(), id.length());
-    //SetSeed(0);
+
 
     Worker_PPLR* worker_pplr = new Worker_PPLR();
     worker_pplr->encrypt_dataset();

@@ -61,7 +61,7 @@ public:
 
     long logp = 30; ///< Scaling Factor (larger logp will give you more accurate value)
     long logn = 10; ///< number of slot is 1024 (this value should be < logN in "src/Params.h")
-    long logq = 300; ///< Ciphertext modulus (this value should be <= logQ in "scr/Params.h")
+    long logq = 450; ///< Ciphertext modulus (this value should be <= logQ in "scr/Params.h")
     long n = 1 << logn;
     long numThread = 5;
     double alpha = 1;
@@ -74,9 +74,11 @@ public:
     int d = 10;
     int class_number = 2;
     int sigmoid_degree = 3;
-    int nb_training_ciphers = 2;
+    int nb_training_ciphers = 8;
     int m = nb_rows * nb_training_ciphers;
     int start_record = 0;
+
+    int refresh_period = 1;
 
     Ring ring;
     SecretKey secretKey;
