@@ -60,21 +60,21 @@ public:
         // Logistic Regression..
 
     long logp = 30; ///< Scaling Factor (larger logp will give you more accurate value)
-    long logn = 10; ///< number of slot is 1024 (this value should be < logN in "src/Params.h")
-    long logq = 450; ///< Ciphertext modulus (this value should be <= logQ in "scr/Params.h")
+    long logn = 12; ///< number of slot is 1024 (this value should be < logN in "src/Params.h")
+    long logq = 300; ///< Ciphertext modulus (this value should be <= logQ in "scr/Params.h")
     long n = 1 << logn;
     long numThread = 1;
-    double alpha = 1;
-    int epochs = 30;
+    double alpha = 2.0;
+    int epochs = 50;
     int nb_slots = n;
-    int nb_rows = 64;
+    int nb_rows = 256;
     int nb_cols = 16;
     int log_nb_cols = 4;
-    int log_nb_rows = 6;
-    int d = 10;
+    int log_nb_rows = 8;
+    int d = 16;
     int class_number = 2;
     int sigmoid_degree = 3;
-    int nb_training_ciphers = 8;
+    int nb_training_ciphers = 48;
     int m = nb_rows * nb_training_ciphers;
     int start_record = 0;
 
@@ -85,7 +85,7 @@ public:
     Scheme scheme;
 
 
-    string dataset_name = "Edin";
+    string dataset_name = "NHANES3";
     string datasets_path = "../DATA/Datasets/";
     vector<Ciphertext> cipher_training_set;
     Ciphertext cipher_model;

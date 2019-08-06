@@ -21,20 +21,20 @@ class Record {
 
 public :
     int id;
-    std::vector <int> values;
+    std::vector <double> values;
     int label;
 
     /******* Functions **********/
 
     // Constructor of the record
 public :
-    Record(int id, std::vector<int> values) {
+    Record(int id, std::vector<double> values) {
         this->id = id;
         this->values = values;
     }
 
 public :
-    Record(int id, std::vector<int> values, int label) {
+    Record(int id, std::vector<double> values, int label) {
         this->id = id;
         this->values = values;
         this->label = label;

@@ -10,26 +10,49 @@
 
 using namespace std;
 
+double fRand(double fMin, double fMax)
+{
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
+
+
 LogisticRegression::LogisticRegression(void) {
-    alpha = 1;
+    alpha = 2.0;
     th = 0.5;
-    d = 10;
-    m = 256;
-    dataset_name = "Edin";
-    epochs = 40;
+    /*d = 197;
+    m = 10000;
+    dataset_name = "MNIST";
+    epochs = 50;*/
+    d = 16;
+    m = 12500;
+    dataset_name = "NHANES3";
+    epochs = 1000;
+
+    /*d = 10;
+    m = 158;
+    dataset_name = "lbw";
+    epochs = 100;*/
+
     dt = new DatasetReader(datasets_path + dataset_name + "/", 2, d);
     for (int j = 0; j < d; j++) {
-        w.push_back(0);
+        w.push_back(0.0);
+        //w.push_back(fRand(-4, 4));
+        cout << w[j] << ", ";
     }
+    cout << " " << endl;
+
     train_records = dt->read_all_train_records();
     test_records = dt->read_all_test_records();
 }
+
 
 double LogisticRegression::sigmoid(double x) {
     return 1.0 / (1.0 + exp(-x));
 }
 
 double LogisticRegression::approx_sigmoid_deg3(double x) {
+    x = x / 8.0;
     return sigmoid_coeffs_deg3[0] + sigmoid_coeffs_deg3[1] * x + sigmoid_coeffs_deg3[2] * x * x * x;
 }
 
@@ -39,7 +62,7 @@ double LogisticRegression::approx_sigmoid_deg5(double x) {
 }
 
 double LogisticRegression::approx_sigmoid_deg7(double x) {
-    //if (x > 8)
+    //if (x > 2)
     //    cout << "Hum .. " << x << endl;
     x = x / 8.0;
     return sigmoid_coeffs_deg7[0] + sigmoid_coeffs_deg7[1] * x + sigmoid_coeffs_deg7[2] * x * x * x +
@@ -88,29 +111,63 @@ int LogisticRegression::approx_predict(Record* r) {
     return label;
 }
 
-void LogisticRegression::approx_fit() {
-    // Read the hole data set
-    //int m = train_records.size();
-
-    for (int j = 0; j < d; j++) {
-        w[j] = 0.0;
+double LogisticRegression::approx_sigmoid(double x, int degree) {
+    if (degree == 3) {
+        return approx_sigmoid_deg3(x);
     }
+    if (degree == 5) {
+        return approx_sigmoid_deg5(x);
+    }
+    return approx_sigmoid_deg7(x);
+}
 
 
+void LogisticRegression::approx_fit() {
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
 
     std::ostringstream oss;
 
-    oss << std::put_time(&tm, "%Y-%m-%d %H-%M");
-    auto grads_file_name = "PLAIN_APPROX_GRADS_" + oss.str();
-    auto weights_file_name = "PLAIN_APPROX_WEIGHTS_" + oss.str();
+    oss << std::put_time(&tm, "%Y-%m-%d %H-%M-%S");
+    string folder_name = oss.str();
+    auto config_file_name = "CONFIG.txt";
+    auto grads_file_name = "GRADS.txt";
+    auto weights_file_name = "WEIGHTS.txt";
+    auto loss_file_name = "LOSS.txt";
 
+    auto path = "../LOGS/" + dataset_name + "/APPROX_LR/" + folder_name + "/";
+
+    ofstream config_log_file;
     ofstream grads_log_file;
     ofstream weights_log_file;
+    ofstream loss_log_file;
 
-    grads_log_file.open(grads_file_name);
-    weights_log_file.open(weights_file_name);
+
+    if (mkdir(path.c_str(), 0777) == -1)
+        cerr << "Error :  " << strerror(errno) << endl;
+    else
+        cout << "Directory created";
+
+    grads_log_file.open(path + grads_file_name);
+    weights_log_file.open(path + weights_file_name);
+    config_log_file.open(path + config_file_name);
+    loss_log_file.open(path + loss_file_name);
+
+
+    config_log_file << " -------------------------- Dataset -----------------------------" << endl;
+    config_log_file << "dataset = " << dataset_name << endl;
+    config_log_file << "m = " << m << endl;
+    config_log_file << "d = " << d << endl;
+    config_log_file << "classes = " << class_number << endl;
+
+
+    config_log_file << " -------------------------- Logistic Regression -----------------------------" << endl;
+    config_log_file << "epochs = " << epochs << endl;
+    config_log_file << "alpha = " << alpha << endl;
+    config_log_file << "sigmoid_degree = " << sigmoid_degree << endl;
+
+    config_log_file.close();
+
 
     for (int e = 0; e < epochs; e++) {
         double grad[d];
@@ -123,15 +180,14 @@ void LogisticRegression::approx_fit() {
             for (int j = 0; j < d; j++) {
                 wx += w[j] * rcd->values[j];
             }
-            double sig = approx_sigmoid_deg3(wx);
-
+            double sig = approx_sigmoid(wx, sigmoid_degree);
             for (int j = 0; j < d; j++) {
                 grad[j] += (sig - rcd->label) * rcd->values[j];
             }
         }
         cout << "Gradient : " << e << endl;
         for (int j = 0; j < d; j++) {
-            grad[j] = grad[j] * alpha / (m);
+            grad[j] = grad[j] * alpha / m;
             w[j] -= grad[j];
             grads_log_file << -grad[j] << ", ";
         }
@@ -143,45 +199,56 @@ void LogisticRegression::approx_fit() {
         }
 
         weights_log_file << " " << endl;
-        cout << "Loss : " << loss() << endl;
+        loss_log_file << loss() << endl;
     }
     grads_log_file.close();
     weights_log_file.close();
+    loss_log_file.close();
 }
 
 void LogisticRegression::fit() {
-    // Read the hole data set
-    //train_records = dt->read_all_train_records();
-    //int m = train_records.size();
-
-    for (int j = 0; j < d; j++) {
-        w[j] = 0.0;
-    }
-
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
 
     std::ostringstream oss;
 
-    oss << std::put_time(&tm, "%Y-%m-%d %H-%M");
-    auto grads_file_name = "PLAIN_GRADS_" + oss.str();
-    auto weights_file_name = "PLAIN_WEIGHTS_" + oss.str();
+    oss << std::put_time(&tm, "%Y-%m-%d %H-%M-%S");
+    string folder_name = oss.str();
+    auto config_file_name = "CONFIG.txt";
+    auto grads_file_name = "GRADS.txt";
+    auto weights_file_name = "WEIGHTS.txt";
+    auto loss_file_name = "LOSS.txt";
 
+    auto path = "../LOGS/" + dataset_name + "/EXACT_LR/" + folder_name + "/";
+
+    ofstream config_log_file;
     ofstream grads_log_file;
     ofstream weights_log_file;
-
-    grads_log_file.open(grads_file_name);
-    weights_log_file.open(weights_file_name);
+    ofstream loss_log_file;
 
 
-    for (int i = 0; i < m; i++) {
-        Record* rcd = train_records[i];
-        //cout << "Record num " << rcd->id << ". Values: ";
-        //for (int j = 0; j < d; j++) {
-        //    cout << rcd->values[j] << " ";
-        //}
-        //cout << " Label: " << rcd->label << endl;
-    }
+    if (mkdir(path.c_str(), 0777) == -1)
+        cerr << "Error :  " << strerror(errno) << endl;
+    else
+        cout << "Directory created";
+
+    grads_log_file.open(path + grads_file_name);
+    weights_log_file.open(path + weights_file_name);
+    config_log_file.open(path + config_file_name);
+    loss_log_file.open(path + loss_file_name);
+
+
+    config_log_file << " -------------------------- Dataset -----------------------------" << endl;
+    config_log_file << "dataset = " << dataset_name << endl;
+    config_log_file << "m = " << m << endl;
+    config_log_file << "d = " << d << endl;
+    config_log_file << "classes = " << class_number << endl;
+
+    config_log_file << " -------------------------- Logistic Regression -----------------------------" << endl;
+    config_log_file << "epochs = " << epochs << endl;
+    config_log_file << "alpha = " << alpha << endl;
+
+    config_log_file.close();
 
     for (int e = 0; e < epochs; e++) {
         double grad[d];
@@ -202,7 +269,7 @@ void LogisticRegression::fit() {
         }
         cout << "Gradient : " << e << endl;
         for (int j = 0; j < d; j++) {
-            grad[j] = grad[j] * alpha / (m);
+            grad[j] = grad[j] * alpha / m;
             w[j] -= grad[j];
             grads_log_file << -grad[j] << ", ";
         }
@@ -214,11 +281,12 @@ void LogisticRegression::fit() {
         }
 
         weights_log_file << " " << endl;
-        cout << "Loss : " << loss() << endl;
-        ///cout << "" << endl;
+        loss_log_file << loss() << endl;
     }
+
     grads_log_file.close();
     weights_log_file.close();
+    loss_log_file.close();
 }
 
 
@@ -234,6 +302,7 @@ double LogisticRegression::loss() {
         int y = rcd->label;
         loss += -y * log(h) - (1 - y) * (1 - h);
     }
+    loss /= m;
     return loss;
 }
 

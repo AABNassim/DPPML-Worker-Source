@@ -146,7 +146,7 @@ vector<Record*> PPLogisticRegression::decrypt_dataset() {
     for (int i = 0; i < nb_training_ciphers; i++) {
         complex<double> *decrypted_training_batch = scheme.decrypt(secretKey, cipher_training_set[i]);
         for (int j = 0; j < nb_rows; j++) {
-            vector<int> values(d);
+            vector<double> values(d);
             for (int k = 0; k < d; k++) {
                 complex<double> val = decrypted_training_batch[j * nb_cols + k];
                 values[k] = (int) round(val.real());

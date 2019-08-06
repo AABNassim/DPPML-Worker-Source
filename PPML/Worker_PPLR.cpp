@@ -4,6 +4,9 @@
 
 #include "Worker_PPLR.h"
 
+#include <unistd.h>
+
+
 
 Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false) {
 
@@ -28,9 +31,7 @@ Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false)
 
     Ciphertext cipher1;
 
-    //cout << "KE ?" << endl;
     scheme.encrypt(cipher1, mvec1, n, logp, logq);
-    //cout << "GNEU GNEU GNEU ?" << endl;
 
     complex<double> *dvec = scheme.decrypt(secretKey, cipher1);
 
@@ -44,15 +45,6 @@ Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false)
     // Next..
     cout << "Tout est bon" << endl;
     //
-
-    encoded_sigmoid_coeffs = new complex<double>[n]; // TODO : Useless ?
-    for (int i = 0; i < sigmoid_degree; i++) {
-        complex<double> c;
-        c.imag(0);
-        c.real(sigmoid_coeffs_deg3[i]);
-        encoded_sigmoid_coeffs[i] = c;
-    }
-    scheme.encrypt(cipher_sigmoid_coeffs, encoded_sigmoid_coeffs, n, logp, logq);
 
     // Model initialization
     complex<double> *encoded_model = new complex<double>[n];
@@ -78,9 +70,21 @@ Worker_PPLR::Worker_PPLR(void) : secretKey(ring), scheme(secretKey, ring, false)
         c.real(1);
         encoded_gadget_matrix[i * nb_cols] = c;
     }
-    scheme.encrypt(cipher_gadget_matrix, encoded_gadget_matrix, n, logp, logq);    //TODO : what's happening ?*/
+    scheme.encrypt(cipher_gadget_matrix, encoded_gadget_matrix, n, logp, logq);    //TODO : what's happening ?
 
     connect_to_mlsp();
+
+    /*SerializationUtils::writeCiphertext(cipher1, "test.txt");
+
+    unsigned int microseconds = 3000000;
+
+    usleep(microseconds);
+
+    if (send_file(mlsp_sock, "test.txt")) {
+        cout << "gneu" << endl;
+    } else {
+        cout << "tfou" << endl;
+    }*/
 
 }
 
@@ -122,7 +126,7 @@ bool Worker_PPLR::send_file(int sock, char* path)
         return false;
     if (filesize > 0)
     {
-        //cout << "Sending a file of size : " << filesize << endl;
+        cout << "Sending a file of size : " << filesize << endl;
         char buffer[1024];
         do
         {
@@ -136,6 +140,7 @@ bool Worker_PPLR::send_file(int sock, char* path)
         }
         while (filesize > 0);
     }
+    fclose(f);
     return true;
 }
 
@@ -172,12 +177,12 @@ bool Worker_PPLR::read_file(int sock, char* path)
     FILE *f = fopen(path, "wb");
     long filesize;
     if (!read_long(sock, &filesize)) {
-        //cout << "lol" << endl;
+        cout << "lol" << endl;
         return false;
     }
     if (filesize > 0)
     {
-        //cout << "Getting a file of size : " << filesize << endl;
+        cout << "Getting a file of size : " << filesize << endl;
         char buffer[1024];
         do
         {
@@ -197,6 +202,7 @@ bool Worker_PPLR::read_file(int sock, char* path)
         }
         while (filesize > 0);
     }
+    fclose(f);
     return true;
 }
 
@@ -223,6 +229,7 @@ void Worker_PPLR::connect_to_mlsp() {
         printf("\nConnection Failed \n");
         return;
     }
+    //send_long(mlsp_sock, 53);
 }
 
 
@@ -272,10 +279,10 @@ vector<Record*> Worker_PPLR::decrypt_dataset() {
     for (int i = 0; i < nb_training_ciphers; i++) {
         complex<double> *decrypted_training_batch = scheme.decrypt(secretKey, cipher_training_set[i]);
         for (int j = 0; j < nb_rows; j++) {
-            vector<int> values(d);
+            vector<double> values(d);
             for (int k = 0; k < d; k++) {
                 complex<double> val = decrypted_training_batch[j * nb_cols + k];
-                values[k] = (int) round(val.real());
+                values[k] = val.real();
             }
 
             Record* rcd = new Record(i * nb_rows + j, values, 0);
@@ -788,11 +795,31 @@ void Worker_PPLR::pp_fit() {
             scheme.reScaleByAndEqual(cipher_sig, logp);
 
             Ciphertext cipher_partial_grad = sum_slots(cipher_sig, log_nb_cols, log_nb_rows + log_nb_cols);
+
+            /*complex<double> * grad = scheme.decrypt(secretKey, cipher_partial_grad);
+            for (int j = 0; j < 1; j++) {
+                for (int k = 0; k < d; k++) {
+                    cout << grad[j * nb_cols + k].real() << ", ";
+                }
+            }
+            cout << " " << endl;*/
+
             scheme.addAndEqual(cipher_grad, cipher_partial_grad);
         }
 
         // So ..
 
+
+        /*complex<double> * grad = scheme.decrypt(secretKey, cipher_grad);
+        for (int j = 0; j < 1; j++) {
+            for (int k = 0; k < d; k++) {
+                cout << grad[j * nb_cols + k].real() << ", ";
+            }
+        }
+        cout << " " << endl;*/
+
+        //Ciphertext hihi;
+        //scheme.encrypt(hihi, grad, n, logp, logq);
 
         SerializationUtils::writeCiphertext(cipher_grad, grad_filename.c_str());
         if (send_file(mlsp_sock, (char *) grad_filename.c_str())) {
@@ -811,7 +838,6 @@ void Worker_PPLR::pp_fit() {
             weights_log_file << "" << endl;
         }
         cout << " " << endl;
-
         scheme.encrypt(cipher_model, model, n, logp, logq);
     }
 
